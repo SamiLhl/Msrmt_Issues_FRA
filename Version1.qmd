@@ -1,0 +1,125 @@
+---
+title: "Indicators of Educational attainments in France"
+author: "Edoardo Ruvolo, Jean Baptiste Astruc, Sami Kader-Yettefti, Sami Louahlia"
+format: html
+execute:
+  message: false
+  warning: false
+echo: false
+---
+
+
+```{r Load the libraries}
+here::i_am("Msrmt_Issues_FRA.Rproj")
+library(here)
+library(ggplot2)
+library(dplyr)
+library(vroom)
+library(tidyr)
+```
+
+```{r Load the datasets}
+Highschl_Results <- vroom(here("fr-en-indicateurs-de-resultat-des-lycees-denseignement-general-et-technologique.csv"))
+IPS_Highschl <- vroom(("fr-en-ips_lycees.csv"))
+```
+
+
+```{r Joining Datasets}
+
+```
+
+
+
+## 1.What are the different high school quality indicators published by the ministry of higher education?
+
+Indicators of high school quality in France are often related to the different 'baccalauréat' high school students have to attend during their second and third year. Among them we find :
+
+The success rate at the bac which measure the number of successful candidates to the number of enlisted candidates associated to a highschool. The bac, especially for most of the period of measurement was a national exam that all students were facing at the same time. Thus it made it quite a solid tool to assess the average level of highschool sudents of different schools.
+
+Taux de réussite brut = (Bacheliers x 100) / Présents
+
+Along with the success rate, there also exists assessments of the share of students who had their bac with some 'merits', which allows to assess just how successful sutdents were on average in passing their baccalauréat rather than only whether they passed it or not.
+
+Taux de mentions brut = (Bacheliers ayant obtenu une mention x 100) / Présents
+
+It was, however overlooking how many students actually got to the point of the baccalauréat, by attending the same school. As such, the ministry of education also offers the rate of access to the baccalauréat, which assesses how many students successfully get to the next step of their studies (next year or success at baccalauréat) relative to the number of students minus those who retook the year.
+
+Taux d'accès brut d'un niveau à l'autre = (Succès x 100) / (Inscrits - Doublants)
+
+The point is to assess how determined the school is, in getting its students to achieve their education and not filter them out if not successful.
+
+In trying to make its measure reflect reality fairly, the ministry accounts for students leaving the school to attend a formation not provided by the school as a "success" for the school. We may question if that may not incentivize schools to push less successful students away from bac général prematurely in order to keep their educational attainments high. 
+It may also encourage schools to not have any vocational training offers, or provide only a select amount of the specialty they consider best for their observed success, in order to push students out of their stats, leading to some sort of segregational processess being exarcebated. 
+
+
+
+## 2.How is the value-added measure (IVAL, indicateur de valeur ajoutée), calculated?
+
+The ministry tries to account for socio-economic as well as general skills and capacity endowments differences between students of different highschools. The goal being to assess how much more the school is providing to students rather than their ability to teach to the most talented or already capable pupils.
+
+As such, they try comparing students from different schools to students having similar characteristics potentially affecting their attainments.
+
+Among the factors accounted for, we find 
+
+- The socio-demographic environment of the school "Are children predominantly surrounded by upper-class children or by working-class kids?"
+
+- The socio-economic origins of children "In which socio-economic environment did the child grow up? What kind of culture did the child grow up with?"
+
+--> This indicator is assessed by the indice de position sociale IPS which gathers information about both parents' professions, educational attainments, cultural practices housing conditions to fully account for the pupils' social background. It also accounts for single-parents situation. A higher IPS implies greater social background enjoyed by children.
+
+- Level of educational attainments at the time of entrance "How was the child performing before entering the school? Notably during the Brevet des collèges?"
+
+Once accounting for all those factors, the ministry is able to determine the expected success rate of high schools at the baccalauréat. They then compare it to the actual success rate and the difference is argued to be the IVAL or the added value that the school offers to its pupils. 
+One may argue that it is a highly aggregated measure that may fail at seeing how a high school over or underperform in terms of IVAL. For instance, some type of students are best dealt by some school while some others are well managed by some others. Conversely they may be terrible at dealing with some specific category of students which would bring the IVAL final value down and make them seen as generally bad. It may lead to a "push to mediocrity" rather than cultivating the specific talents of some institutions in bringing some type of students towards success.
+
+
+
+
+## 3.How do the IVAL and other indicators correlate with IPS (indicateurs de position sociale, a higher IPS indicates the higher average socio-economic status of parents at the school level) in Paris? Can you propose a way to represent graphically the correlations, for High schools in Paris (separately for public and private high schools)?
+```{r modify the rentré scolaire var}
+IPS_Highschl2 <- IPS_Highschl |> rename("Annee"=`Rentrée scolaire`)
+IPS_Highschl2$Annee <- gsub("-\\d{4}", "", IPS_Highschl2$Annee)
+IPS_Highschl2$Annee <- as.numeric(IPS_Highschl2$Annee)
+```
+
+```{r join the datasets}
+Final_Data <- Highschl_Results |> 
+  left_join(IPS_Highschl2, by = c("UAI","Annee"))
+```
+
+This command provides the unfiltered joined dataset. We dod not need all these variables to advance further so we suggesst filtering the dataset.
+
+```{r}
+Final_Data_F <- Final_Data |> select(Etablissement,Ville,Departement,Annee,UAI,`Taux de reussite - Toutes series`,`Taux de reussite attendu france - Toutes series`,`Taux de mentions - Toutes series`,`Taux de mentions attendu - Toutes series`,`Valeur ajoutee du taux de reussite - Toutes series`,`Valeur ajoutee du taux de mentions - Toutes series`,`IPS voie GT`,`IPS voie PRO`,`Type de lycée`,`IPS Ensemble GT-PRO`,`IPS Ensemble GT-PRO`)
+```
+
+```{r for Parisian purpose only}
+Final_Data_Paris <- Final_Data_F |> filter(Departement=="PARIS")|>rename(IVAL_Reussite = `Valeur ajoutee du taux de reussite - Toutes series`)|> rename(IVAL_Mention = `Valeur ajoutee du taux de mentions - Toutes series`) |> rename(IPS_Global =`IPS Ensemble GT-PRO`) |> rename(Type=`Type de lycée`)
+Final_Data_Paris <- Final_Data_Paris|> filter(IVAL_Reussite != "ND")
+Final_Data_Paris$IVAL_Reussite <- as.numeric(Final_Data_Paris$IVAL_Reussite)
+```
+
+
+```{r exploit the data1}
+ggplot(Final_Data_Paris, aes(x=IPS_Global, y=IVAL_Reussite,color=Type, na.rm=TRUE))+
+         geom_point()
+```
+
+```{r exploit the data2}
+Final_Data_Paris <- Final_Data_Paris|> filter(IVAL_Mention != "ND")
+Final_Data_Paris$IVAL_Mention <- as.numeric(Final_Data_Paris$IVAL_Mention)
+ggplot(Final_Data_Paris, aes(x=IPS_Global, y=IVAL_Mention, color=Type, na.rm=TRUE))+
+         geom_point()
+```
+
+As IPS increases, the variance in IVAL outcomes decreases. This could either imply that all high schools in these environments have all achieved the best education abilities and do not differ in doing so or more probably, that as IPS increases, high school's contribution is decreasingly important for students' attainment as parents' have the means, notably through private lessons, to provide all the support their children might need to pass the baccalauréat. Moreover, we generally observe that all kids in well ranked high schoool manage to pass the bac so differences may only occur once looking at how well they succeeded at the bac. 
+
+Some more variance indeed seem to exist for pupils passing with merits, which could be explained by parents mostly ensuring their kids manage to pass the bac, and not put that many additional efforts in their children having "merits", leaving for highschool's teching difference to be seen.
+
+There does not seem, however, to be any correlation between IPS and IVAL.
+
+```{r separate School by type}
+
+
+```
+
